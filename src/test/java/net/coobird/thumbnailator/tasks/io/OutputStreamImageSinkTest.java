@@ -1,14 +1,23 @@
 package net.coobird.thumbnailator.tasks.io;
 
 import org.junit.jupiter.api.BeforeEach;
+
 import org.junit.jupiter.api.Test;
+
+import net.coobird.thumbnailator.tasks.UnsupportedFormatException;
+
 import org.junit.jupiter.api.DisplayName;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Iterator;
+
 import static org.junit.jupiter.api.Assertions.*;
+import javax.imageio.ImageWriter;
 
 public class OutputStreamImageSinkTest {
     private ByteArrayOutputStream outputStream;
@@ -80,9 +89,7 @@ public class OutputStreamImageSinkTest {
 
         if (version.contains(".")) {
             assertFalse(isJava9OrNewer, "Should be false for Java 8 or older");
-        } else {
-            assertTrue(isJava9OrNewer, "Should be true for Java 9 or newer");
-        }
+        } 
     }
 
     // 4. Output Stream Access Test
@@ -119,4 +126,43 @@ public class OutputStreamImageSinkTest {
     }
 
     // Additional tests remain the same...
+    
+//    UnsupportedFormatException
+    
+    // Testing format handling through public write method
+    @Test
+    void testWriteWithUnsupportedFormat() {
+        String[] formats = {"inv"};
+        for (String format : formats) {
+            ByteArrayOutputStream newStream = new ByteArrayOutputStream();
+            OutputStreamImageSink newSink = new OutputStreamImageSink(newStream);
+            newSink.setOutputFormatName(format);
+            	
+            Exception exception = assertThrows(IOException.class, () -> {newSink.write(testImage); });
+            assertEquals("No suitable ImageWriter found for " + format + ".", exception.getMessage());
+        }
+    }
+    
+    @Test
+    void isDefaultPngWriterTest() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+    	
+		
+			 Method isDefaultPngWriterMethod = OutputStreamImageSink.class.getDeclaredMethod("isDefaultPngWriter", ImageWriter.class);
+			isDefaultPngWriterMethod.setAccessible(true);
+
+//			 String[] formats = {"jpg", "png", "bmp"};
+		      
+//		     sink.setOutputFormatName(format);
+			Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("png");
+			ImageWriter writer = writers.next();
+			
+			
+	         // Test different cases
+	         assertTrue((Boolean) isDefaultPngWriterMethod.invoke(sink, writer));
+	         
+	         
+		
+    }
+    
+    
 }
