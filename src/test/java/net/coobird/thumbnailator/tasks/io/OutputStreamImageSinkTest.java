@@ -31,9 +31,8 @@ public class OutputStreamImageSinkTest {
         testImage = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
     }
 
-    // 1. Constructor Tests (Boundary Testing)
+    //Testing the Constructor with null
     @Test
-    @DisplayName("Constructor should throw NullPointerException for null OutputStream")
     void testConstructorWithNull() {
         assertThrows(NullPointerException.class,
                 () -> new OutputStreamImageSink(null),
@@ -41,67 +40,121 @@ public class OutputStreamImageSinkTest {
         );
     }
 
+    //Testing the Constructor with valid input OutputStream
     @Test
-    @DisplayName("Constructor should accept valid OutputStream")
     void testConstructorWithValidStream() {
         assertDoesNotThrow(() -> new OutputStreamImageSink(new ByteArrayOutputStream()));
     }
 
-    // 2. Format Detection Tests (Using Reflection)
+    // Jpeg and Bmp Image Format Tests
     @Test
-    @DisplayName("Test JPEG/BMP format detection")
     void testJpegBmpFormatDetection() throws Exception {
+        //Using reflection we can test private methods
         Method isJpegOrBmpMethod = OutputStreamImageSink.class.getDeclaredMethod("isJpegOrBmp", String.class);
         isJpegOrBmpMethod.setAccessible(true);
 
-        // Test different cases
+        // Valid inputs, including case sensitive testing.
         assertTrue((Boolean) isJpegOrBmpMethod.invoke(sink, "jpg"));
         assertTrue((Boolean) isJpegOrBmpMethod.invoke(sink, "jpeg"));
         assertTrue((Boolean) isJpegOrBmpMethod.invoke(sink, "bmp"));
         assertTrue((Boolean) isJpegOrBmpMethod.invoke(sink, "JPG"));
         assertTrue((Boolean) isJpegOrBmpMethod.invoke(sink, "JPEG"));
         assertTrue((Boolean) isJpegOrBmpMethod.invoke(sink, "BMP"));
+
+        // Some Invalid Inputs
         assertFalse((Boolean) isJpegOrBmpMethod.invoke(sink, "png"));
         assertFalse((Boolean) isJpegOrBmpMethod.invoke(sink, "gif"));
     }
 
+    // Png Image format tests
     @Test
-    @DisplayName("Test PNG format detection")
     void testPngFormatDetection() throws Exception {
+        //using reflection we can test private methods
         Method isPngMethod = OutputStreamImageSink.class.getDeclaredMethod("isPng", String.class);
         isPngMethod.setAccessible(true);
 
+        //Valid Inputs, including case sensitive testing
         assertTrue((Boolean) isPngMethod.invoke(sink, "png"));
         assertTrue((Boolean) isPngMethod.invoke(sink, "PNG"));
+
+        //Some Invalid inputs.
         assertFalse((Boolean) isPngMethod.invoke(sink, "jpg"));
         assertFalse((Boolean) isPngMethod.invoke(sink, "jpeg"));
+        assertFalse((Boolean) isPngMethod.invoke(sink, "bmp"));
     }
 
-    // 3. Java Version Detection Test (Using Reflection)
+    // Testing Java Version when null
     @Test
-    @DisplayName("Test Java version detection")
-    void testJavaVersionDetection() throws Exception {
+    void testJavaVersionNull() throws Exception {
+        //Using reflection we can test private methods
         Method isJava9OrNewerMethod = OutputStreamImageSink.class.getDeclaredMethod("isJava9OrNewer");
         isJava9OrNewerMethod.setAccessible(true);
 
-        boolean isJava9OrNewer = (Boolean) isJava9OrNewerMethod.invoke(sink);
-        String version = System.getProperty("java.specification.version");
+        //Temporary holder for original property
+        String original = System.getProperty("java.specification.version");
 
-        if (version.contains(".")) {
-            assertFalse(isJava9OrNewer, "Should be false for Java 8 or older");
-        } 
+        //Clear the property to set it to Null
+        System.clearProperty("java.specification.version");
+
+        //Testing Null, should return false
+        assertFalse((Boolean) isJava9OrNewerMethod.invoke(sink));
+
+        //Post test: Set the java version property back to its original
+        System.setProperty("java.specification.version", original);
+
     }
+
+    // Testing Java version when java 8
+    @Test
+    void testJavaVersionJava8() throws Exception {
+        //Using reflection we can test private methods
+        Method isJava9OrNewerMethod = OutputStreamImageSink.class.getDeclaredMethod("isJava9OrNewer");
+        isJava9OrNewerMethod.setAccessible(true);
+
+        //Temporary holder for original property
+        String original = System.getProperty("java.specification.version");
+
+        //Set property to java 8 (Defined as 1.8)
+        System.setProperty("java.specification.version", "1.8");
+
+        //Testing java 8, should return false
+        assertFalse((Boolean) isJava9OrNewerMethod.invoke(sink));
+
+        //Post test: Set the java version property back to its original
+        System.setProperty("java.specification.version", original);
+
+    }
+
+    // Testing Java version when java 9
+    @Test
+    void testJavaVersionJava9() throws Exception {
+        //Using reflection we can test private methods
+        Method isJava9OrNewerMethod = OutputStreamImageSink.class.getDeclaredMethod("isJava9OrNewer");
+        isJava9OrNewerMethod.setAccessible(true);
+
+        //Temporary holder for original property
+        String original = System.getProperty("java.specification.version");
+
+        //Set property to java 9 (Defined as 9)
+        System.setProperty("java.specification.version", "9");
+
+        //Testing java 9, should return True
+        assertTrue((Boolean) isJava9OrNewerMethod.invoke(sink));
+
+        //Post test: Set the java version property back to its original
+        System.setProperty("java.specification.version", original);
+
+    }
+
 
     // 4. Output Stream Access Test
     @Test
-    @DisplayName("getSink should return the original OutputStream")
     void testGetSink() {
         assertEquals(outputStream, sink.getSink());
     }
 
     // 5. Write Method Tests
     @Test
-    @DisplayName("Write should throw NullPointerException for null image")
     void testWriteWithNullImage() {
         assertThrows(NullPointerException.class,
                 () -> sink.write(null),
@@ -111,7 +164,6 @@ public class OutputStreamImageSinkTest {
 
     // Testing format handling through public write method
     @Test
-    @DisplayName("Write should handle different formats")
     void testWriteWithDifferentFormats() {
         String[] formats = {"jpg", "png", "bmp"};
         for (String format : formats) {
