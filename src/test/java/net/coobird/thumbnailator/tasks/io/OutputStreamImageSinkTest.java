@@ -1,9 +1,11 @@
 package net.coobird.thumbnailator.tasks.io;
 
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeEach; 
 
 import org.junit.jupiter.api.Test;
 
+import net.coobird.thumbnailator.ThumbnailParameter;
+import net.coobird.thumbnailator.builders.ThumbnailParameterBuilder;
 import net.coobird.thumbnailator.tasks.UnsupportedFormatException;
 
 import org.junit.jupiter.api.DisplayName;
@@ -177,7 +179,20 @@ public class OutputStreamImageSinkTest {
         }
     }
 
-    // Additional tests remain the same...
+// outputFormat is not set throws illegalStateException
+    
+    @Test
+    void testWriteWithoutSettingOutputFormatThrowsException() {
+        OutputStreamImageSink sink = new OutputStreamImageSink(new ByteArrayOutputStream());
+        BufferedImage image = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
+        
+        Exception exception = assertThrows(IllegalStateException.class, () -> {
+            sink.write(image);
+        });
+
+        assertEquals("Output format has not been set.", exception.getMessage());
+    }
+
     
 //    UnsupportedFormatException
     
@@ -194,6 +209,71 @@ public class OutputStreamImageSinkTest {
             assertEquals("No suitable ImageWriter found for " + format + ".", exception.getMessage());
         }
     }
+    
+    
+// Ensuring branch from param.getOutputFormatType() != DEFAULT_FORMAT_TYPE is covered.
+    
+    @Test
+    void testWriteWithCustomOutputFormatType() throws IOException {
+        // Setup
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        OutputStreamImageSink sink = new OutputStreamImageSink(os);
+        sink.setOutputFormatName("jpg");
+
+        // Build ThumbnailParameter with a custom compression type
+        ThumbnailParameter param = new ThumbnailParameterBuilder()
+                .size(100, 100)
+                .format("jpg")
+                .formatType("JPEG") // <-- This triggers the "custom format type" logic
+                .quality(Float.NaN) // <-- Ensures we don't override quality
+                .build();
+        sink.setThumbnailParameter(param);
+
+        // Create dummy image
+        BufferedImage image = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
+
+        // Act
+        sink.write(image);
+
+        // Assert
+        assertTrue(os.size() > 0, "Image should be written to the stream.");
+    }
+
+
+ // Tests setting fallback compression (0.0f) when all conditions for PNG fallback are true:
+
+    
+    @Test
+    void testWriteTriggersPngJava9CompressionWorkaround() throws IOException {
+        System.setProperty("java.specification.version", "9");
+
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        OutputStreamImageSink sink = new OutputStreamImageSink(os);
+        sink.setOutputFormatName("png");
+
+        // No compression param, so fallback logic is used
+        BufferedImage image = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
+        sink.write(image);
+
+        assertTrue(os.size() > 0);
+
+        // Reset system property
+        System.setProperty("java.specification.version", "1.8");
+    }
+
+
+    // Tests when ios is equal null that IOException is thrown (couldnt be done, see below)
+   
+    /*
+     * NOT FOR LATER:
+     The only uncovered branch is ios == null, which relies on ImageIO.createImageOutputStream(os). 
+     Since this is a static final method in the standard library and always returns a valid stream for ByteArrayOutputStream, and 
+     since we can't mock static methods or modify the class under test, it’s not possible to cover this line without using external 
+     mocking tools like PowerMockito or extracting the call for override.
+      */
+    
+    
+    
     
     @Test
     void isDefaultPngWriterTest() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
@@ -215,6 +295,7 @@ public class OutputStreamImageSinkTest {
 	         
 		
     }
+    
     
     
 }
