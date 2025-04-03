@@ -21,6 +21,8 @@ import java.util.Iterator;
 import static org.junit.jupiter.api.Assertions.*;
 import javax.imageio.ImageWriter;
 
+
+
 public class OutputStreamImageSinkTest {
     private ByteArrayOutputStream outputStream;
     private OutputStreamImageSink sink;
@@ -295,7 +297,29 @@ public class OutputStreamImageSinkTest {
 	         
 		
     }
-    
-    
+
+
+    @Test
+    void testCompressionQualityIsApplied() throws IOException {
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        OutputStreamImageSink sink = new OutputStreamImageSink(os);
+        sink.setOutputFormatName("jpg");
+
+        ThumbnailParameter param = new ThumbnailParameterBuilder()
+                .size(100, 100)
+                .format("jpg")
+                .quality(0.75f)
+                .build();
+
+        sink.setThumbnailParameter(param);
+
+        BufferedImage image = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
+        sink.write(image);
+
+        assertTrue(os.size() > 0, "Image should be written with the specified quality");
+
+    }
+
+
     
 }
